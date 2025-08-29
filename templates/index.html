@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Receptive Field Calculator</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body { max-width: 800px; margin: 0 auto; padding: 20px; }
+        .layer { margin: 10px 0; }
+        #graph { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Neural Network Receptive Field Calculator</h1>
+    
+    <div id="layers">
+        <button onclick="addLayer('conv')">Add Conv Layer</button>
+        <button onclick="addLayer('maxpool')">Add MaxPool Layer</button>
+        <div id="layer-list"></div>
+    </div>
+
+    <button onclick="calculate()">Calculate RF</button>
+    <div id="results"></div>
+    <div id="graph"></div>
+
+    <script>
+        let layers = [];
+
+        function addLayer(type) {
+            const layer = { type: type, kernel: 3 };
+            layers.push(layer);
+            updateLayerDisplay();
+        }
+
+        function updateLayerDisplay() {
+            const list = document.getElementById('layer-list');
+            list.innerHTML = '';
+            layers.forEach((layer, i) => {
+                list.innerHTML += `
+                    <div class="layer">
+                        Layer ${i + 1}: ${layer.type.toUpperCase()}
+                        Kernel: <input type="number" value="${layer.kernel}"
+                        onchange="updateKernel(${i}, this.value)">
+                        <button onclick="removeLayer(${i})">Remove</button>
+                    </div>`;
+            });
+        }
+
+        function updateKernel(index, value) {
+            layers[index].kernel = parseInt(value);
+        }
+
+        function removeLayer(index) {
+            layers.splice(index, 1);
+            updateLayerDisplay();
+        }
+
+        function calculate() {
+            fetch('/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ layers: layers })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('results').innerHTML = 
+                    `<h3>Final Receptive Field Size: ${data.rf_sizes[data.rf_sizes.length - 1]}</h3>`;
+                Plotly.newPlot('graph', JSON.parse(data.graph).data, JSON.parse(data.graph).layout);
+            });
+        }
+    </script>
+</body>
+</html>
